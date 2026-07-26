@@ -17,17 +17,27 @@ permite separar dos preguntas distintas:
 
 ## Comandos
 
+**Por jugador:**
 - `/stats jugador:<nombre> jornada:<opcional>` — estadísticas de un jugador.
   Sin `jornada`, muestra el acumulado de toda la liga. Con `jornada`, solo esa fecha/torneo.
-- `/top metrica:<...> jornada:<opcional>` — ranking top 10.
+- `/top metrica:<...> jornada:<opcional>` — ranking top 10 de jugadores.
+
+**Por equipo:**
+- `/stats_equipo equipo:<nombre> jornada:<opcional>` — estadísticas acumuladas de un equipo completo.
+- `/top_equipo metrica:<...> jornada:<opcional>` — ranking top 10 de equipos.
+
+**Ambos rankings (`/top` y `/top_equipo`):**
   - **Sin `jornada`**: ranking acumulado de toda la liga (ideal para el premio a fin de temporada).
   - **Con `jornada`**: ranking solo de esa fecha/torneo puntual (ideal para el MVP de la jornada).
   - Métricas disponibles: daño promedio, daño más alto en una sola partida, daño total
-    acumulado, victorias, KDA promedio.
+    acumulado, daño recibido promedio, daño recibido total, curación promedio,
+    curación total, victorias, KDA promedio.
+
+**Utilidades:**
 - `/jornadas` — lista todas las jornadas/torneos que ya tienen partidas registradas
   (útil para saber qué nombres escribir en los otros comandos; además hay autocompletado).
 - `/registrar` — (solo Staff/Admins) carga una partida nueva directo desde Discord,
-  indicando a qué jornada pertenece.
+  indicando a qué jornada, equipo, daño, daño recibido y curación pertenece.
 
 ## Paso 1: Crear la Google Sheet
 
@@ -36,16 +46,29 @@ permite separar dos preguntas distintas:
 3. En la fila 1, escribe exactamente estos encabezados, uno por columna:
 
    ```
-   Fecha | Jornada | Juego | Jugador | Equipo | Resultado | Daño | Kills | Muertes | Asistencias
+   Fecha | ID Partida | Jornada | Juego | Jugador | Equipo | Resultado | Daño | Daño Recibido | Curación | Kills | Muertes | Asistencias
    ```
 
-4. En la columna "Jornada" escribe el nombre de la fecha o torneo al que pertenece
+   El bot lee los encabezados por **nombre**, no por posición — puedes reordenar
+   las columnas o quitar las que no uses (ej: si no te interesa "Curación", puedes
+   omitirla) sin que se rompa nada. Si ya tenías una hoja de una versión anterior
+   sin "ID Partida", "Daño Recibido" o "Curación", solo agrega las columnas nuevas
+   con estos nombres exactos y el bot las empezará a usar automáticamente.
+4. **"ID Partida"** (recomendada si te importan las estadísticas por equipo):
+   ponle el mismo identificador a todos los jugadores de una misma partida
+   (ej: `J1-P3` para la partida 3 de la Jornada 1). Sin esto, `/stats_equipo` y
+   `/top_equipo` cuentan cada fila de jugador por separado al contar victorias —
+   si tu equipo tiene 5 jugadores, una victoria del equipo sumaría 5 en vez de 1.
+   Con "ID Partida" cargado, el bot detecta que esas 5 filas son la misma partida
+   y cuenta solo 1 victoria por equipo.
+5. En la columna "Jornada" escribe el nombre de la fecha o torneo al que pertenece
    esa partida (ej: `Jornada 1`, `Jornada 2`, `Torneo Apertura - J3`...). Usa el
    **mismo texto exacto** para todas las partidas de una misma jornada, o el bot
    las va a contar como jornadas distintas.
-5. En la columna "Resultado" usa siempre "Victoria" o "Derrota" (el bot los reconoce en minúsculas también).
-6. Copia el ID de la hoja desde la URL:
+6. En la columna "Resultado" usa siempre "Victoria" o "Derrota" (el bot los reconoce en minúsculas también).
+7. Copia el ID de la hoja desde la URL:
    `https://docs.google.com/spreadsheets/d/ESTE_ES_EL_ID/edit` → ese es tu `SHEET_ID`.
+
 
 ## Paso 2: Crear credenciales de Google (cuenta de servicio)
 
@@ -115,6 +138,17 @@ reinicia Discord.
 **Ver el rendimiento acumulado de ese mismo jugador en toda la liga:**
 ```
 /stats jugador:NombreDelJugador
+```
+
+**Premiar al equipo que más curó/tankeó daño en toda la liga:**
+```
+/top_equipo metrica:Curación total
+/top_equipo metrica:Daño recibido total
+```
+
+**Ver el resumen completo de un equipo en la Jornada 2:**
+```
+/stats_equipo equipo:NombreDelEquipo jornada:Jornada 2
 ```
 
 ## Subirlo a GitHub
