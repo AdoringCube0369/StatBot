@@ -87,11 +87,24 @@ def refresh_caches(rows):
     return jornadas, equipos
 
 
-def is_staff(interaction: discord.Interaction) -> bool:
-    if interaction.user.guild_permissions.administrator:
+async def obtener_miembro_fresco(interaction: discord.Interaction) -> discord.Member:
+    """
+    Pide los datos del miembro directamente a la API de Discord, sin usar la
+    caché interna del bot. Evita problemas donde interaction.user queda con
+    datos desactualizados o incompletos (roles vacíos) en algunos servidores.
+    """
+    try:
+        return await interaction.guild.fetch_member(interaction.user.id)
+    except Exception:
+        return interaction.user
+
+
+async def is_staff(interaction: discord.Interaction) -> bool:
+    miembro = await obtener_miembro_fresco(interaction)
+    if miembro.guild_permissions.administrator:
         return True
     objetivo = ADMIN_ROLE_NAME.strip().lower()
-    return any(role.name.strip().lower() == objetivo for role in interaction.user.roles)
+    return any(role.name.strip().lower() == objetivo for role in miembro.roles)
 
 
 def filtrar_por_jornada(rows, jornada: Optional[str]):
@@ -424,18 +437,20 @@ async def jornadas(interaction: discord.Interaction):
 
 @bot.tree.command(name="mi_permiso", description="Muestra si el bot te reconoce como Staff/Admin en este servidor, y por qué")
 async def mi_permiso(interaction: discord.Interaction):
-    es_admin = interaction.user.guild_permissions.administrator
-    roles = [r.name for r in interaction.user.roles if r.name != "@everyone"]
+    await interaction.response.defer(ephemeral=True)
+    miembro = await obtener_miembro_fresco(interaction)
+    es_admin = miembro.guild_permissions.administrator
+    roles = [r.name for r in miembro.roles if r.name != "@everyone"]
     tiene_rol_staff = any(r.strip().lower() == ADMIN_ROLE_NAME.strip().lower() for r in roles)
 
     lineas = [
         f"**Variable ADMIN_ROLE_NAME configurada:** `{ADMIN_ROLE_NAME}`",
-        f"**Tus roles en este servidor:** {', '.join(roles) if roles else '(ninguno)'}",
+        f"**Tus roles en este servidor (datos frescos de la API):** {', '.join(roles) if roles else '(ninguno)'}",
         f"**¿Tienes permiso de Administrador?** {'Sí' if es_admin else 'No'}",
         f"**¿Tienes el rol Staff configurado?** {'Sí' if tiene_rol_staff else 'No'}",
         f"**¿Puedes usar /registrar?** {'Sí ✅' if (es_admin or tiene_rol_staff) else 'No ❌'}",
     ]
-    await interaction.response.send_message("\n".join(lineas), ephemeral=True)
+    await interaction.followup.send("\n".join(lineas), ephemeral=True)
 
 
 @bot.tree.command(name="registrar", description="(Staff) Registra una partida en la hoja de estadísticas")
@@ -473,7 +488,7 @@ async def registrar(
     curacion: Optional[float] = None,
     id_partida: Optional[str] = None,
 ):
-    if not is_staff(interaction):
+    if not await is_staff(interaction):
         await interaction.response.send_message("Solo el staff puede registrar partidas.", ephemeral=True)
         return
 
