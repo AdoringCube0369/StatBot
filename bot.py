@@ -236,6 +236,7 @@ def construir_embed_stats(nombre: str, tipo: str, jornada: Optional[str], partid
 
 
 intents = discord.Intents.default()
+intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 
